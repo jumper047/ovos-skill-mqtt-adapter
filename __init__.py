@@ -29,13 +29,15 @@ class MqttAdapterSkill(MycroftSkill):
         host = self.settings.get('host')
         port = self.settings.get('port', 1883)
         keepalive = self.settings.get('keepalive', 60)
-        self.mqtt.connect(host, port, keepalive)
         self.mqtt.on_connect = self.on_connect
         self.mqtt.on_message = self.on_message
+        self.mqtt.connect(host, port, keepalive)
         self.mqtt.loop_start()
+        self.log.info('MQTT initialized')
 
     def on_connect(self, client, userdata, flags, rc):
         client.subscribe(TOPIC)
+        self.log.info('Subscribed!')
 
     def on_message(self, client, userdata, msg):
         if msg.topic == TOPIC:
