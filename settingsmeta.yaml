@@ -1,0 +1,16 @@
+skillMetadata:
+  sections:
+    - name: Mqtt
+      fields:
+        - name: host
+          type: text
+          label: Host address of the MQTT server
+          value: ''
+        - name: username
+          type: text
+          label: Username
+          value: ''
+        - name: password
+          type: text
+          label: Password
+          value: ''
