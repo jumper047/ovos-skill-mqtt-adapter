@@ -41,17 +41,19 @@ class MqttAdapterSkill(MycroftSkill):
         if msg.topic == TOPIC:
             payload = bytes.decode(msg.payload)
             if payload == 'WAKE':
-                self.log.debug('Received command "WAKE"')
+                self.log.info('Received command "WAKE"')
                 self.bus.emit(Message("mycroft.mic.listen"))
                 if self.config_core.get("enclosure").get("platform", "unknown") != "unknown":
                     self.bus.emit(Message('mycroft.volume.unmute',
                                           data={"speak_message": False}))
             elif payload == 'SLEEP':
-                self.log.debug('Received command "SLEEP"')
+                self.log.info('Received command "SLEEP"')
                 self.bus.emit(Message('recognizer_loop:sleep'))
                 if self.config_core.get("enclosure").get("platform", "unknown") != "unknown":
                     self.bus.emit(Message('mycroft.volume.mute',
                                               data={"speak_message": False}))
+            else:
+                self.log.info('Received unknown payload: {}'.format(payload))    
 
     def shutdown(self):
         self.mqtt.loop_stop()
