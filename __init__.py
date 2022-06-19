@@ -1,3 +1,4 @@
+from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill
 import paho.mqtt.client as mqtt
 
@@ -54,5 +55,6 @@ class MqttAdapterSkill(MycroftSkill):
         self.mqtt.loop_stop()
     
             
-    
+def create_skill():
+    return MqttAdapterSkill()
 
