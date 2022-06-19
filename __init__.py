@@ -20,6 +20,8 @@ class MqttAdapterSkill(MycroftSkill):
     def setup_mqtt(self):
         username = self.settings.get('username')
         password = self.settings.get('password')
+        if not username:
+            return None
         if password:
             self.mqtt.username_pw_set(username, password=password)
         else:
