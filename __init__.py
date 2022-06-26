@@ -44,7 +44,7 @@ class MqttAdapterSkill(MycroftSkill):
             payload = bytes.decode(msg.payload)
             if payload == 'WAKE':
                 self.log.info('Received command "WAKE"')
-                self.bus.emit(Message("mycroft.mic.listen"))
+                self.bus.emit(Message('recognizer_loop:wake_up'))
                 if self.config_core.get("enclosure").get("platform", "unknown") != "unknown":
                     self.bus.emit(Message('mycroft.volume.unmute',
                                           data={"speak_message": False}))
