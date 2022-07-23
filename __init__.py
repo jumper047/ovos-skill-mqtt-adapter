@@ -42,6 +42,7 @@ class MqttAdapterSkill(MycroftSkill):
 
     def initialize(self):
         # self.topics = Topics('mycroft/{}'.format(self.settings.get('instance_name')))
+        self.advertise_topic = 'homeassistant'
         self.topics = Topics('mycroft')
         self.handlers = dict()
 
@@ -51,6 +52,7 @@ class MqttAdapterSkill(MycroftSkill):
         self.handlers[self.topics.mic_mute.set] = self.process_mic_mute_command
 
         self.setup_mqtt()
+        self.advertise_mic_mute()
 
     def setup_mqtt(self):
         username = self.settings.get('username')
@@ -89,6 +91,7 @@ class MqttAdapterSkill(MycroftSkill):
 
 
     # Mic mute switch
+
     def handle_mic_status(self, event):
         muted = event.data['muted']
         self.mqtt.publish(self.topics.mic_mute.state, payload=('ON' if muted else 'OFF'), retain=True)
@@ -103,6 +106,17 @@ class MqttAdapterSkill(MycroftSkill):
         else:
             raise MqttAdapterSkillError("Payload {} is unknown".format(state))
         self.bus.emit(Message('mycroft.mic.get_status'))
+
+    def advertise_mic_mute(self):
+        config = {
+            "name": "Mycroft Muted",
+            "command_topic": self.topics.mic_mute.set,
+            "state_topic": self.topics.mic_mute.state,
+        }
+        advertise_topic = "{}/switch/mycroft/mic_mute/config".format(self.advertise_topic)
+        self.mqtt.publish(advertise_topic, payload=config, retain=True)
+        
+        
     
             
 def create_skill():
