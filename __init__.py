@@ -116,6 +116,7 @@ class MqttAdapterSkill(MycroftSkill):
         }
         advertise_topic = "{}/switch/mycroft/mic_mute/config".format(self.advertise_topic)
         self.mqtt.publish(advertise_topic, payload=json.dumps(config), retain=True)
+        self.log.info('Mic mute advertised')
         
         
     
