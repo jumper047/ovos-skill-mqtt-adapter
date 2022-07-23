@@ -1,6 +1,7 @@
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill
 import paho.mqtt.client as mqtt
+import json
 
 
 APP_NAME = "mycroft_mqtt_adapter"
@@ -114,7 +115,7 @@ class MqttAdapterSkill(MycroftSkill):
             "state_topic": self.topics.mic_mute.state,
         }
         advertise_topic = "{}/switch/mycroft/mic_mute/config".format(self.advertise_topic)
-        self.mqtt.publish(advertise_topic, payload=config, retain=True)
+        self.mqtt.publish(advertise_topic, payload=json.dumps(config), retain=True)
         
         
     
