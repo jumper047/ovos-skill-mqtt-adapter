@@ -110,9 +110,19 @@ class MqttAdapterSkill(MycroftSkill):
 
     def advertise_mic_mute(self):
         config = {
-            "name": "Mycroft Muted",
             "command_topic": self.topics.mic_mute.set,
             "state_topic": self.topics.mic_mute.state,
+            "name": "Mycroft Muted",
+            "uniq_id": "abcmycroftmicmute",
+            "pl_on": "ON",
+            "pl_off": "OFF",
+            "device": {
+                "name": "Mycroft",
+                "manufacturer": "Mycroft",
+                "identifiers": [
+                    "abcmycroft",
+                ]
+            }
         }
         advertise_topic = "{}/switch/mycroft/mic_mute/config".format(self.advertise_topic)
         self.mqtt.publish(advertise_topic, payload=json.dumps(config), retain=True)
