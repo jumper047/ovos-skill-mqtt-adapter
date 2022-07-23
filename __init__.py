@@ -3,8 +3,34 @@ from mycroft.skills.core import MycroftSkill
 import paho.mqtt.client as mqtt
 
 
-TOPIC = "mycroft/cmd"
 APP_NAME = "mycroft_mqtt_adapter"
+
+
+class MqttAdapterSkillError(Exception):
+    """General MqttAdapterSkill exception"""
+
+class Topic:
+
+    def __init__(self, root_topic):
+        self.root = root_topic
+
+    def full_topic(self, *args):
+        topic_elts = [self.root, *args]
+        return "/".join(topic_elts)
+
+class MicMuteTopics(Topic):
+
+    def __init__(self, root_topic):
+        super().__init__(root_topic)
+        self.set = self.full_topic('mic_mute', 'set')
+        self.state = self.full_topic('mic_mute', 'state')
+
+
+class Topics(Topic):
+
+    def __init__(self, root_topic):
+        super().__init__(root_topic)
+        self.mic_mute = MicMuteTopics(root_topic)
 
 
 class MqttAdapterSkill(MycroftSkill):
@@ -15,6 +41,15 @@ class MqttAdapterSkill(MycroftSkill):
         
 
     def initialize(self):
+        # self.topics = Topics('mycroft/{}'.format(self.settings.get('instance_name')))
+        self.topics = Topics('mycroft')
+        self.handlers = dict()
+
+        # Mic mute button
+        self.bus.on('mycroft.mic.get_status.response', self.handle_mic_status)
+        self.bus.emit(Message('mycroft.mic.get_status'))
+        self.handlers[self.topics.mic_mute.set] = self.process_mic_mute_command
+
         self.setup_mqtt()
 
     def setup_mqtt(self):
@@ -36,29 +71,38 @@ class MqttAdapterSkill(MycroftSkill):
         self.log.info('MQTT initialized')
 
     def on_connect(self, client, userdata, flags, rc):
-        client.subscribe(TOPIC)
+        # Mute switch
+        client.subscribe(self.topics.mic_mute.set)
         self.log.info('Subscribed!')
 
     def on_message(self, client, userdata, msg):
-        if msg.topic == TOPIC:
-            payload = bytes.decode(msg.payload)
-            if payload == 'WAKE':
-                self.log.info('Received command "WAKE"')
-                self.bus.emit(Message('recognizer_loop:wake_up'))
-                if self.config_core.get("enclosure").get("platform", "unknown") != "unknown":
-                    self.bus.emit(Message('mycroft.volume.unmute',
-                                          data={"speak_message": False}))
-            elif payload == 'SLEEP':
-                self.log.info('Received command "SLEEP"')
-                self.bus.emit(Message('recognizer_loop:sleep'))
-                if self.config_core.get("enclosure").get("platform", "unknown") != "unknown":
-                    self.bus.emit(Message('mycroft.volume.mute',
-                                              data={"speak_message": False}))
-            else:
-                self.log.info('Received unknown payload: {}'.format(payload))    
+        if msg.topic not in self.handlers:
+            return None
+
+        try:
+            self.handlers[msg.topic](bytes.decode(msg.payload))
+        except Exception as e:
+            raise MqttAdapterSkillError from e
 
     def shutdown(self):
         self.mqtt.loop_stop()
+
+
+    # Mic mute switch
+    def handle_mic_status(self, event):
+        muted = event.data['muted']
+        self.mqtt.publish(self.topics.mic_mute.state, payload=('ON' if muted else 'OFF'), retain=True)
+
+    def process_mic_mute_command(self, state):
+        if state == 'ON':
+            self.log.info('Switch MUTE toggled on via MQTT')
+            self.bus.emit(Message('mycroft.mic.mute'))
+        elif state == 'OFF':
+            self.log.info('Switch MUTE toggled off via MQTT')
+            self.bus.emit(Message('mycroft.mic.unmute'))
+        else:
+            raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+        self.bus.emit(Message('mycroft.mic.get_status'))
     
             
 def create_skill():
