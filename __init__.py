@@ -102,6 +102,7 @@ class MqttAdapterSkill(MycroftSkill):
             self.bus.emit(Message('mycroft.mic.unmute'))
         else:
             raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+        self.bus.emit(Message('mycroft.mic.get_status'))
     
             
 def create_skill():
