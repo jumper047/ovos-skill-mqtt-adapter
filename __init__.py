@@ -1,7 +1,9 @@
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill
+from mycroft.version import CORE_VERSION_STR
 import paho.mqtt.client as mqtt
 import json
+import uuid
 
 
 APP_NAME = "mycroft_mqtt_adapter"
@@ -29,7 +31,8 @@ class MicMuteTopics(Topic):
 
 class Topics(Topic):
 
-    def __init__(self, root_topic):
+    def __init__(self, id):
+        root_topic = "mycroft/{}".format(id)
         super().__init__(root_topic)
         self.mic_mute = MicMuteTopics(root_topic)
 
@@ -42,8 +45,7 @@ class MqttAdapterSkill(MycroftSkill):
         
 
     def initialize(self):
-        # self.topics = Topics('mycroft/{}'.format(self.settings.get('instance_name')))
-        self.advertise_topic = 'homeassistant'
+        self.advertise_topic = self.settings.get('advertise_topic', 'homeassistant')
         self.topics = Topics('mycroft')
         self.handlers = dict()
 
@@ -91,6 +93,28 @@ class MqttAdapterSkill(MycroftSkill):
         self.mqtt.loop_stop()
 
 
+    def mycroft_id(self):
+        """Get uuid for current hardware.
+
+        In case this Mycroft instance was moved from one HW to another 
+        this ID can be setted via settings to certain value."""
+        id = self.settings.get('uuid')
+        if not id:
+            id = str(uuid.getnode())
+            self.settings['uuid'] = id
+        return id
+
+    def mqtt_device_config(self):
+        return {
+            "name": "Mycroft",
+            "manufacturer": "Mycroft AI, Inc",
+            "sw_version": CORE_VERSION_STR,
+            "identifiers": [
+                    self.mycroft_id,
+                ]
+            }
+    
+
     # Mic mute switch
 
     def handle_mic_status(self, event):
@@ -109,26 +133,19 @@ class MqttAdapterSkill(MycroftSkill):
         self.bus.emit(Message('mycroft.mic.get_status'))
 
     def advertise_mic_mute(self):
+        id = self.mycroft_id() + "mic_mute"
         config = {
             "command_topic": self.topics.mic_mute.set,
             "state_topic": self.topics.mic_mute.state,
             "name": "Mycroft Muted",
-            "uniq_id": "abcmycroftmicmute",
+            "uniq_id": id, 
             "pl_on": "ON",
             "pl_off": "OFF",
-            "device": {
-                "name": "Mycroft",
-                "manufacturer": "Mycroft",
-                "identifiers": [
-                    "abcmycroft",
-                ]
-            }
+            "device": self.mqtt_device_config()
         }
-        advertise_topic = "{}/switch/mycroft/mic_mute/config".format(self.advertise_topic)
+        advertise_topic = "{}/switch/{}/config".format(self.advertise_topic, id)
         self.mqtt.publish(advertise_topic, payload=json.dumps(config), retain=True)
         self.log.info('Mic mute advertised')
-        
-        
     
             
 def create_skill():
