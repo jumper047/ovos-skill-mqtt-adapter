@@ -58,6 +58,9 @@ class MqttAdapterSkill(MycroftSkill):
 
         self.setup_mqtt()
 
+    def on_settings_changed(self):
+        self.teardown_mqtt()
+        self.setup_mqtt()
 
     def setup_mqtt(self):
         username = self.settings.get('username')
@@ -85,6 +88,10 @@ class MqttAdapterSkill(MycroftSkill):
         self.mqtt.loop_start()
         self.log.info('MQTT initialized')
 
+    def teardown_mqtt(self):
+        self.mqtt.disconnect()
+        self.mqtt.loop_stop()
+
     def on_connect(self, client, userdata, flags, rc):
         if self.settings.get('advertise_sensors', True):
             discovery_prefix = self.settings.get('discovery_prefix')
@@ -98,6 +105,10 @@ class MqttAdapterSkill(MycroftSkill):
 
         self.log.info('Connected to MQTT server')
 
+    def on_disconnect(self, client, userdata, flags, rc):
+        self.mqtt.publish(self.topics.available, payload="ONLINE", retain=True)
+        self.log.info('Disconnected from MQTT server')
+
     def on_message(self, client, userdata, msg):
         if msg.topic not in self.command_handlers:
             return None
@@ -108,8 +119,7 @@ class MqttAdapterSkill(MycroftSkill):
             raise MqttAdapterSkillError from e
 
     def shutdown(self):
-        self.mqtt.publish(self.topics.available, payload="OFFLINE", retain=True)
-        self.mqtt.loop_stop()
+        self.teardown_mqtt()
  
     def register_mqtt_handler(self, topic, handler):
         self.command_handlers[topic] = handler
