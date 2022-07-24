@@ -31,9 +31,12 @@ class MicMuteTopics(Topic):
 
 class Topics(Topic):
 
-    def __init__(self, id):
-        root_topic = "mycroft/{}".format(id)
+    def __init__(self, device_name=None):
+        root_topic = "mycroft"
+        if device_name is not None:
+            root_topic += "/{}".format(device_name)
         super().__init__(root_topic)
+        self.available = self.full_topic('available')
         self.mic_mute = MicMuteTopics(root_topic)
 
 
@@ -46,13 +49,16 @@ class MqttAdapterSkill(MycroftSkill):
 
     def initialize(self):
         self.advertise_topic = self.settings.get('advertise_topic', 'homeassistant')
-        self.topics = Topics('mycroft')
+        self.topics = Topics()
         self.handlers = dict()
 
         # Mic mute button
         self.bus.on('mycroft.mic.get_status.response', self.handle_mic_status)
         self.bus.emit(Message('mycroft.mic.get_status'))
         self.handlers[self.topics.mic_mute.set] = self.process_mic_mute_command
+
+        # Set up availability topic
+        self.mqtt.will_set(self.topics.available, payload="OFFLINE", retain=True)
 
         self.setup_mqtt()
         self.advertise_mic_mute()
@@ -78,6 +84,7 @@ class MqttAdapterSkill(MycroftSkill):
     def on_connect(self, client, userdata, flags, rc):
         # Mute switch
         client.subscribe(self.topics.mic_mute.set)
+        self.mqtt.publish(self.topics.available, payload="ONLINE", retain=True)
         self.log.info('Subscribed!')
 
     def on_message(self, client, userdata, msg):
@@ -90,6 +97,7 @@ class MqttAdapterSkill(MycroftSkill):
             raise MqttAdapterSkillError from e
 
     def shutdown(self):
+        self.mqtt.publish(self.topics.available, payload="OFFLINE", retain=True)
         self.mqtt.loop_stop()
 
 
@@ -113,7 +121,7 @@ class MqttAdapterSkill(MycroftSkill):
                     self.mycroft_id(),
                 ]
             }
-    
+
 
     # Mic mute switch
 
@@ -137,10 +145,13 @@ class MqttAdapterSkill(MycroftSkill):
         config = {
             "command_topic": self.topics.mic_mute.set,
             "state_topic": self.topics.mic_mute.state,
+            "availability_topic": self.topics.available,
             "name": "Mycroft Muted",
             "uniq_id": id, 
             "pl_on": "ON",
             "pl_off": "OFF",
+            "pl_avail": "ONLINE",
+            "pl_not_avail": "OFFLINE",
             "icon": "mdi:microphone-off",
             "device": self.mqtt_device_config()
         }
