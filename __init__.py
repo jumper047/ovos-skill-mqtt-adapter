@@ -81,6 +81,7 @@ class MqttAdapterSkill(MycroftSkill):
             self.mqtt.connect(host, port, keepalive)
         except Exception as e:
             self.log.exception(e)
+            return None
         self.mqtt.loop_start()
         self.log.info('MQTT initialized')
 
