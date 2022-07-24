@@ -224,10 +224,10 @@ class MqttAdapterSkill(MycroftSkill):
     def process_vol_mute_command(self, state):
         if state == 'ON':
             self.log.info('Switch VOL MUTE toggled on via MQTT')
-            self.bus.emit(Message('mycroft.volume.mute'))
+            self.bus.emit(Message('mycroft.volume.mute'), data={'speak_message': False})
         elif state == 'OFF':
             self.log.info('Switch VOL MUTE toggled off via MQTT')
-            self.bus.emit(Message('mycroft.volume.unmute'))
+            self.bus.emit(Message('mycroft.volume.unmute'), data={'speak_message': False})
         else:
             raise MqttAdapterSkillError("Payload {} is unknown".format(state))
 
