@@ -246,7 +246,7 @@ class MqttAdapterSkill(MycroftSkill):
         config.update(self.mqtt_availability_config())
         discovery_topic = "{}/switch/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Mic mute advertised')
+        self.log.info('Volume mute advertised')
 
 def create_skill():
     return MqttAdapterSkill()
