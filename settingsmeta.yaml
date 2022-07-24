@@ -1,11 +1,15 @@
 skillMetadata:
   sections:
-    - name: Mqtt
+    - name: Connection
       fields:
         - name: host
           type: text
           label: Host address of the MQTT server
           value: ''
+        - name: port
+          type: number
+          label: Port number of the MQTT server
+          value: 1883
         - name: username
           type: text
           label: Username
@@ -14,3 +18,19 @@ skillMetadata:
           type: text
           label: Password
           value: ''
+        - name: subtopic
+          type: text
+          label: Subtopic for this Mycroft instance (leave blank if you have only one Mycroft)
+          value: ''
+    # - name: MQTT discovery
+    #   fields:
+    #     - name: advertise_sensors
+    #       type: checkbox
+    #       label: Advertise available sensors to home automation server
+    #       value: True
+    #     - name:  discovery_prefix
+    #       type: text
+    #       label: Discovery topic prefix
+    #       value: 'homeassistant'
+          
+          
