@@ -141,6 +141,7 @@ class MqttAdapterSkill(MycroftSkill):
             "uniq_id": id, 
             "pl_on": "ON",
             "pl_off": "OFF",
+            "icon": "mdi:microphone-off",
             "device": self.mqtt_device_config()
         }
         advertise_topic = "{}/switch/{}/config".format(self.advertise_topic, id)
