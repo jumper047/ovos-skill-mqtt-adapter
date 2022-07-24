@@ -57,9 +57,6 @@ class MqttAdapterSkill(MycroftSkill):
         self.init_mic_mute()
 
         self.setup_mqtt()
-        vol_msg = self.bus.wait_for_response(
-            Message("mycroft.volume.get", {'show': False}))
-        self.log.info('Vol msg: %s', vol_msg)
 
     def on_settings_changed(self):
         self.teardown_mqtt()
