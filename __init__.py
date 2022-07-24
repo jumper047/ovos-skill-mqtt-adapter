@@ -31,6 +31,14 @@ class MicMuteTopics(Topic):
         self.state = self.full_topic('mic_mute', 'state')
 
 
+class VolMuteTopics(Topic):
+
+    def __init__(self, root_topic):
+        super().__init__(root_topic)
+        self.set = self.full_topic('vol_mute', 'set')
+        self.state = self.full_topic('vol_mute', 'state')
+
+
 class Topics(Topic):
 
     def __init__(self, device_name=None):
@@ -40,6 +48,7 @@ class Topics(Topic):
         super().__init__(root_topic)
         self.available = self.full_topic('available')
         self.mic_mute = MicMuteTopics(root_topic)
+        self.vol_mute = VolMuteTopics(root_topic)
 
 
 class MqttAdapterSkill(MycroftSkill):
@@ -169,10 +178,10 @@ class MqttAdapterSkill(MycroftSkill):
 
     def process_mic_mute_command(self, state):
         if state == 'ON':
-            self.log.info('Switch MUTE toggled on via MQTT')
+            self.log.info('Switch MIC MUTE toggled on via MQTT')
             self.bus.emit(Message('mycroft.mic.mute'))
         elif state == 'OFF':
-            self.log.info('Switch MUTE toggled off via MQTT')
+            self.log.info('Switch MIC MUTE toggled off via MQTT')
             self.bus.emit(Message('mycroft.mic.unmute'))
         else:
             raise MqttAdapterSkillError("Payload {} is unknown".format(state))
@@ -183,7 +192,7 @@ class MqttAdapterSkill(MycroftSkill):
         config = {
             "command_topic": self.topics.mic_mute.set,
             "state_topic": self.topics.mic_mute.state,
-            "name": "Mycroft Muted",
+            "name": "Mycroft Mic Muted",
             "uniq_id": id, 
             "pl_on": "ON",
             "pl_off": "OFF",
@@ -194,8 +203,50 @@ class MqttAdapterSkill(MycroftSkill):
         discovery_topic = "{}/switch/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
         self.log.info('Mic mute advertised')
-    
-            
+
+
+    # Volume mute switch
+    def init_vol_mute(self):
+        # For now I don't want to interact with mixer inside this plugin
+        # but to rely on ohter Mycroft skills instead. So I'll assume
+        # on the moment of the plugin's init volume is unmuted
+        self._vol_mute = False
+        self.bus.on('mycroft.volume.duck', lambda _: self.set_vol_mute_state('ON'))
+        self.bus.on('mycroft.volume.unduck', lambda _: self.set_vol_mute_state('OFF'))
+        self.register_mqtt_handler(self.topics.vol_mute.set, self.process_vol_mute_command)
+        self.register_advertise_function(self.advertise_vol_mute)
+
+
+    def set_vol_mute_state(self, state):
+        self.mqtt.publish(self.topics.vol_mute.state , payload=state, retain=True)
+
+    def process_vol_mute_command(self, state):
+        if state == 'ON':
+            self.log.info('Switch VOL MUTE toggled on via MQTT')
+            self.bus.emit(Message('mycroft.volume.mute'))
+        elif state == 'OFF':
+            self.log.info('Switch VOL MUTE toggled off via MQTT')
+            self.bus.emit(Message('mycroft.volume.unmute'))
+        else:
+            raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+
+    def advertise_vol_mute(self, discovery_prefix):
+        id = self.mqtt_discovery_unique_id() + "vol_mute"
+        config = {
+            "command_topic": self.topics.vol_mute.set,
+            "state_topic": self.topics.vol_mute.state,
+            "name": "Mycroft Speaker Muted",
+            "uniq_id": id,
+            "pl_on": "ON",
+            "pl_off": "OFF",
+            "icon": "mdi:volume-off",
+            "device": self.mqtt_device_config()
+        }
+        config.update(self.mqtt_availability_config())
+        discovery_topic = "{}/switch/{}/config".format(discovery_prefix, id)
+        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
+        self.log.info('Mic mute advertised')
+
 def create_skill():
     return MqttAdapterSkill()
 
