@@ -27,7 +27,7 @@ skillMetadata:
         - name: advertise_sensors
           type: checkbox
           label: Advertise available sensors to home automation server
-          value: True
+          value: true
         - name:  discovery_prefix
           type: text
           label: Discovery topic prefix
