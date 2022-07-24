@@ -110,7 +110,7 @@ class MqttAdapterSkill(MycroftSkill):
             "manufacturer": "Mycroft AI, Inc",
             "sw_version": CORE_VERSION_STR,
             "identifiers": [
-                    self.mycroft_id,
+                    self.mycroft_id(),
                 ]
             }
     
