@@ -77,7 +77,10 @@ class MqttAdapterSkill(MycroftSkill):
         # Set up availability topic
         self.mqtt.will_set(self.topics.available, payload="OFFLINE", retain=True)
 
-        self.mqtt.connect(host, port, keepalive)
+        try:
+            self.mqtt.connect(host, port, keepalive)
+        except Exception as e:
+            self.log.exception(e)
         self.mqtt.loop_start()
         self.log.info('MQTT initialized')
 

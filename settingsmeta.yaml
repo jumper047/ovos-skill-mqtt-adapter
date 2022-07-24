@@ -22,15 +22,15 @@ skillMetadata:
           type: text
           label: Subtopic for this Mycroft instance (leave blank if you have only one Mycroft)
           value: ''
-    # - name: MQTT discovery
-    #   fields:
-    #     - name: advertise_sensors
-    #       type: checkbox
-    #       label: Advertise available sensors to home automation server
-    #       value: True
-    #     - name:  discovery_prefix
-    #       type: text
-    #       label: Discovery topic prefix
-    #       value: 'homeassistant'
+    - name: MQTT discovery
+      fields:
+        - name: advertise_sensors
+          type: checkbox
+          label: Advertise available sensors to home automation server
+          value: True
+        - name:  discovery_prefix
+          type: text
+          label: Discovery topic prefix
+          value: 'homeassistant'
           
           
