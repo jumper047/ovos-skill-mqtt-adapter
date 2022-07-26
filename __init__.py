@@ -274,11 +274,11 @@ class MqttAdapterSkill(MycroftSkill):
     def init_speaking_sensor(self):
         self.bus.on(
             'recognizer_loop:audio_output_start',
-            self.set_speaking('ON')
+            lambda _: self.set_speaking('ON')
         )
         self.bus.on(
             'recognizer_loop:audio_output_end',
-            self.set_speaking('OFF')
+            lambda _: self.set_speaking('OFF')
         )
         self.register_advertise_function(self.advertise_speaking)
         self.set_speaking('OFF')
@@ -306,11 +306,11 @@ class MqttAdapterSkill(MycroftSkill):
     def init_listening_sensor(self):
         self.bus.on(
             'recognizer_loop:record_begin',
-            self.set_listening('ON')
+            lambda _: self.set_listening('ON')
         )
         self.bus.on(
             'recognizer_loop:record_end',
-            self.set_listening('OFF')
+            lambda _: self.set_listening('OFF')
         )        
         self.register_advertise_function(self.advertise_listening)
         self.set_listening('OFF')
@@ -332,7 +332,7 @@ class MqttAdapterSkill(MycroftSkill):
         config.update(self.mqtt_availability_config())
         discovery_topic = "{}/binary_sensor/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Speaking sensor advertised')
+        self.log.info('Listening sensor advertised')
 
 def create_skill():
     return MqttAdapterSkill()
