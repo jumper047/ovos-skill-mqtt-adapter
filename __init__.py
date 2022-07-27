@@ -119,6 +119,7 @@ class MqttAdapterSkill(MycroftSkill):
         self.log.info('MQTT initialized')
 
     def teardown_mqtt(self):
+        self.mqtt.publish(self.topics.available, payload="OFFLINE", retain=True)
         self.mqtt.disconnect()
         self.mqtt.loop_stop()
 
@@ -136,7 +137,6 @@ class MqttAdapterSkill(MycroftSkill):
         self.log.info('Connected to MQTT server')
 
     def on_disconnect(self, client, userdata, flags, rc):
-        self.mqtt.publish(self.topics.available, payload="ONLINE", retain=True)
         self.log.info('Disconnected from MQTT server')
 
     def on_message(self, client, userdata, msg):
