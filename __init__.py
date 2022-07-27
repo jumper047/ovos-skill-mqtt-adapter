@@ -351,10 +351,14 @@ class MqttAdapterSkill(MycroftSkill):
     def advertise_listen_button(self, discovery_prefix):
         id = self.mqtt_discovery_unique_id() + "listen_button"
         config = {
-            "command_topic": self.topics.listen_button,
-            "name": "Mycroft Listen Command",
-            "uniq_id": id, 
-            "payload_press": "PRESS",
+            'name':'doorbell',
+            'unique_id':'doorbell_button',
+            'payload_press':'press',
+            'command_topic':'homeassistant/button/doorbell/commands'
+            # "command_topic": self.topics.listen_button,
+            # "name": "Mycroft Listen Command",
+            # "uniq_id": id, 
+            # "payload_press": "PRESS",
             # "icon": "mdi:microphone-off",
             # "device": self.mqtt_device_config()
         }
