@@ -57,7 +57,7 @@ class Topics(Topic):
 
     def __init__(self, device_name=None):
         root_topic = "mycroft"
-        if not device_name:
+        if device_name:
             root_topic += "/{}".format(device_name)
         super().__init__(root_topic)
         self.available = self.full_topic('available')
