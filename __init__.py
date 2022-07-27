@@ -248,10 +248,10 @@ class MqttAdapterSkill(MycroftSkill):
     def process_vol_mute_command(self, state):
         if state == 'ON':
             self.log.info('Switch VOL MUTE toggled on via MQTT')
-            self.bus.emit(Message('mycroft.volume.mute'))
+            self.bus.emit(Message('mycroft.volume.mute', data={'speak_message': False}))
         elif state == 'OFF':
             self.log.info('Switch VOL MUTE toggled off via MQTT')
-            self.bus.emit(Message('mycroft.volume.unmute'))
+            self.bus.emit(Message('mycroft.volume.unmute', data={'speak_message': False}))
         else:
             raise MqttAdapterSkillError("Payload {} is unknown".format(state))
 
@@ -362,9 +362,6 @@ class MqttAdapterSkill(MycroftSkill):
         discovery_topic = "{}/button/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
         self.log.info('Listen button advertised')
-
-
-            # self.bus.emit(Message('mycroft.mic.listen'))
 
 
 def create_skill():
