@@ -354,9 +354,9 @@ class MqttAdapterSkill(MycroftSkill):
             "command_topic": self.topics.listen_button,
             "name": "Mycroft Listen Command",
             "uniq_id": id, 
-            # "payload_press": "PRESS",
+            "payload_press": "PRESS",
             # "icon": "mdi:microphone-off",
-            "device": self.mqtt_device_config()
+            # "device": self.mqtt_device_config()
         }
         # config.update(self.mqtt_availability_config())
         discovery_topic = "{}/button/{}/config".format(discovery_prefix, id)
