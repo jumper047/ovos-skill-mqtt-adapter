@@ -358,7 +358,7 @@ class MqttAdapterSkill(MycroftSkill):
             # "icon": "mdi:microphone-off",
             "device": self.mqtt_device_config()
         }
-        config.update(self.mqtt_availability_config())
+        # config.update(self.mqtt_availability_config())
         discovery_topic = "{}/button/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
         self.log.info('Listen button advertised')
