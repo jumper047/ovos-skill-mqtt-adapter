@@ -61,6 +61,7 @@ class Topics(Topic):
             root_topic += "/{}".format(device_name)
         super().__init__(root_topic)
         self.available = self.full_topic('available')
+        self.listen_button = self.full_topic('listen_button')
         self.mic_mute = MicMuteTopics(root_topic)
         self.vol_mute = VolMuteTopics(root_topic)
         self.speaking = SpeakingTopics(root_topic)
@@ -83,6 +84,7 @@ class MqttAdapterSkill(MycroftSkill):
         self.init_vol_mute()
         self.init_listening_sensor()
         self.init_speaking_sensor()
+        self.init_listen_button()
 
         self.setup_mqtt()
 
@@ -333,6 +335,37 @@ class MqttAdapterSkill(MycroftSkill):
         discovery_topic = "{}/binary_sensor/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
         self.log.info('Listening sensor advertised')
+
+    # Listen button
+    def init_listen_button(self):
+        self.register_mqtt_handler(self.topics.listen_button, self.process_listen_button)
+        self.register_advertise_function(self.advertise_listen_button)
+
+    def process_listen_button(self, state):
+        if state == 'PRESS':
+            self.log.info('Command listening triggered by MQTT')
+            self.bus.emit(Message('mycroft.mic.listen'))
+        else:
+            raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+
+    def advertise_listen_button(self, discovery_prefix):
+        id = self.mqtt_discovery_unique_id() + "listen_button"
+        config = {
+            "command_topic": self.topics.listen_button,
+            "name": "Mycroft Listen Command",
+            "uniq_id": id, 
+            "payload_press": "PRESS",
+            # "icon": "mdi:microphone-off",
+            "device": self.mqtt_device_config()
+        }
+        config.update(self.mqtt_availability_config())
+        discovery_topic = "{}/button/{}/config".format(discovery_prefix, id)
+        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
+        self.log.info('Listen button advertised')
+
+
+            # self.bus.emit(Message('mycroft.mic.listen'))
+
 
 def create_skill():
     return MqttAdapterSkill()
