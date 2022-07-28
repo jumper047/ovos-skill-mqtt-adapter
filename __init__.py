@@ -171,6 +171,7 @@ class MqttAdapterSkill(MycroftSkill):
     def mqtt_device_config(self):
         return {
             "name": "Mycroft",
+            "model": self.config_core['enclosure'].get("platform", "unknown"), 
             "manufacturer": "Mycroft AI, Inc",
             "sw_version": CORE_VERSION_STR,
             "identifiers": [
