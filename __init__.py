@@ -13,13 +13,13 @@
 # limitations under the License.
 #
 
-from mycroft.messagebus.message import Message
-from mycroft.skills.core import MycroftSkill
-from mycroft.version import CORE_VERSION_STR
-import paho.mqtt.client as mqtt
 import json
 import uuid
 
+import paho.mqtt.client as mqtt
+from mycroft.messagebus.message import Message
+from mycroft.skills.core import MycroftSkill
+from mycroft.version import CORE_VERSION_STR
 
 APP_NAME = "mycroft_mqtt_adapter"
 
