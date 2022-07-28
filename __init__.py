@@ -62,6 +62,7 @@ class Topics(Topic):
         super().__init__(root_topic)
         self.available = self.full_topic('available')
         self.listen_button = self.full_topic('listen_button')
+        self.command = self.full_topic('command')
         self.mic_mute = MicMuteTopics(root_topic)
         self.vol_mute = VolMuteTopics(root_topic)
         self.speaking = SpeakingTopics(root_topic)
@@ -85,6 +86,7 @@ class MqttAdapterSkill(MycroftSkill):
         self.init_listening_sensor()
         self.init_speaking_sensor()
         self.init_listen_button()
+        self.init_command()
 
         self.setup_mqtt()
 
@@ -363,6 +365,16 @@ class MqttAdapterSkill(MycroftSkill):
         discovery_topic = "{}/button/{}/config".format(discovery_prefix, id)
         self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
         self.log.info('Listen button advertised')
+
+    # Command topic
+    def init_command(self):
+        self.register_mqtt_handler(self.topics.command, self.process_command)
+
+    def process_command(self, command):
+        self.bus.emit(Message("recognizer_loop:utterance", {
+            'utterances': [command],
+            'lang': self.lang
+        }))
 
 
 def create_skill():
