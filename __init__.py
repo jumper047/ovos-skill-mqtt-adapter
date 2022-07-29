@@ -318,7 +318,7 @@ class MqttAdapterSkill(MycroftSkill):
             self.set_listening_off
         )        
         self.register_advertise_function(self.advertise_listening)
-        self.set_listening('OFF')
+        self.set_listening_off()
 
     def set_listening_on(self):
         self.set_sensor_state(LISTENING_STATE_TOPIC, ON)
@@ -326,7 +326,7 @@ class MqttAdapterSkill(MycroftSkill):
     def set_listening_off(self):
         self.set_sensor_state(LISTENING_STATE_TOPIC, OFF)
 
-    def advertise_listening(self, discovery_prefix):
+    def advertise_listening(self):
         id = self.mqtt_discovery_unique_id() + "listening"
         config = {
             "state_topic": self.expand(LISTENING_STATE_TOPIC),
