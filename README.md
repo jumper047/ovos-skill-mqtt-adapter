@@ -12,7 +12,7 @@ To use this skill you need MQTT server and (possibly) some sort of home automati
 
 MQTT credentials needed to connect to server should be setted via settings through home.mycroft.ai; after that Mycroft will connect to server. If discovery enabled (should be by default, can be changed via settings), you shold see Mycroft into Settings->Devices section. Also you can set up all switches/sensors manually using information below.
 
-This skill uses topic `mycroft/device_name` if you set additional name via settings, or just `mycroft` if not. Below I'll assume you have only one mycroft instance and use it without device name. So there are topics you can use:
+This skill uses topic `mycroft/subtopic` if you set subtopic via settings, or just `mycroft` if not. Below I'll assume you have only one mycroft instance and use it without device name. So there are topics you can use:
 
 Availability topic:
 
