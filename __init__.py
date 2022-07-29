@@ -21,67 +21,32 @@ from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill
 from mycroft.version import CORE_VERSION_STR
 
+
 APP_NAME = "mycroft_mqtt_adapter"
 
 
-class MqttAdapterSkillError(Exception):
-    """General MqttAdapterSkill exception"""
+# Topics
+MIC_MUTE_STATE_TOPIC = '{main_topic}/mic_mute/state'
+MIC_MUTE_SET_TOPIC = '{main_topic}/mic_mute/set'
+VOL_MUTE_STATE_TOPIC = '{main_topic}/vol_mute/state'
+VOL_MUTE_SET_TOPIC = '{main_topic}/vol_mute/set'
+SPEAKING_STATE_TOPIC = '{main_topic}/speaking/state'
+LISTENING_STATE_TOPIC = '{main_topic}/listening/state'
+AVAILABILITY_TOPIC = '{main_topic}/available'
+LISTEN_BUTTON_TOPIC = '{main_topic}/listen_button'
+COMMAND_TOPIC = '{main_topic}/command'
 
+# Payloads
+ON = "ON"
+OFF = "OFF"
+ONLINE = "ONLINE"
+OFFLINE = "OFFLINE"
+PRESS = "PRESS"
 
-class Topic:
-
-    def __init__(self, root_topic):
-        self.root = root_topic
-
-    def full_topic(self, *args):
-        topic_elts = [self.root, *args]
-        return "/".join(topic_elts)
-
-
-class MicMuteTopics(Topic):
-
-    def __init__(self, root_topic):
-        super().__init__(root_topic)
-        self.set = self.full_topic('mic_mute', 'set')
-        self.state = self.full_topic('mic_mute', 'state')
-
-
-class VolMuteTopics(Topic):
-
-    def __init__(self, root_topic):
-        super().__init__(root_topic)
-        self.set = self.full_topic('vol_mute', 'set')
-        self.state = self.full_topic('vol_mute', 'state')
-
-
-class SpeakingTopics(Topic):
-
-    def __init__(self, root_topic):
-        super().__init__(root_topic)
-        self.state = self.full_topic('speaking', 'state')
-
-
-class ListeningTopics(Topic):
-
-    def __init__(self, root_topic):
-        super().__init__(root_topic)
-        self.state = self.full_topic('listening', 'state')
-
-
-class Topics(Topic):
-
-    def __init__(self, device_name=None):
-        root_topic = "mycroft"
-        if device_name:
-            root_topic += "/{}".format(device_name)
-        super().__init__(root_topic)
-        self.available = self.full_topic('available')
-        self.listen_button = self.full_topic('listen_button')
-        self.command = self.full_topic('command')
-        self.mic_mute = MicMuteTopics(root_topic)
-        self.vol_mute = VolMuteTopics(root_topic)
-        self.speaking = SpeakingTopics(root_topic)
-        self.listening = ListeningTopics(root_topic)
+# Discovery
+SWITCH_DISCOVERY_TOPIC = "{discovery_topic}/switch/{id}/config"
+BINARY_SENSOR_DISCOVERY_TOPIC = "{discovery_topic}/binary_sensor/{id}/config"
+BUTTON_DISCOVERY_TOPIC = "{discovery_topic}/button/{id}/config"
 
 
 class MqttAdapterSkill(MycroftSkill):
@@ -93,7 +58,10 @@ class MqttAdapterSkill(MycroftSkill):
         self.advertise_functions = list()
 
     def initialize(self):
-        self.topics = Topics(self.settings.get("subtopic"))
+        
+        subtopic = self.settings.get("subtopic")
+        self.main_topic = "mycroft/{}".format(subtopic) if subtopic else "mycroft"
+        self.discovery_topic = self.settings.get('discovery_prefix')
 
         # Init sensors
         self.init_mic_mute()
@@ -125,7 +93,7 @@ class MqttAdapterSkill(MycroftSkill):
         self.mqtt.on_message = self.on_message
 
         # Set up availability topic
-        self.mqtt.will_set(self.topics.available, payload="OFFLINE", retain=True)
+        self.mqtt.will_set(self.expand(AVAILABILITY_TOPIC), payload=OFFLINE, retain=True)
 
         try:
             self.mqtt.connect(host, port, keepalive)
@@ -136,15 +104,14 @@ class MqttAdapterSkill(MycroftSkill):
         self.log.info('MQTT initialized')
 
     def teardown_mqtt(self):
-        self.mqtt.publish(self.topics.available, payload="OFFLINE", retain=True)
+        self.mqtt.publish(self.expand(AVAILABILITY_TOPIC), payload=OFFLINE, retain=True)
         self.mqtt.disconnect()
         self.mqtt.loop_stop()
 
     def on_connect(self, client, userdata, flags, rc):
         if self.settings.get('advertise_sensors', True):
-            discovery_prefix = self.settings.get('discovery_prefix')
             for func in self.advertise_functions:
-                func(discovery_prefix)
+                func()
 
         self.mqtt.publish(self.topics.available, payload="ONLINE", retain=True)
 
@@ -159,20 +126,26 @@ class MqttAdapterSkill(MycroftSkill):
     def on_message(self, client, userdata, msg):
         if msg.topic not in self.command_handlers:
             return None
-
         try:
             self.command_handlers[msg.topic](bytes.decode(msg.payload))
         except Exception as e:
-            raise MqttAdapterSkillError from e
+            self.log.exception(e)
 
     def shutdown(self):
         self.teardown_mqtt()
  
-    def register_mqtt_handler(self, topic, handler):
-        self.command_handlers[topic] = handler
+    def register_mqtt_handler(self, topic_template, handler):
+        self.command_handlers[self.expand(topic_template)] = handler
 
     def register_advertise_function(self, func):
         self.advertise_functions.append(func)
+
+    def expand(self, template, **kwargs):
+        return template.format(
+            main_topic=self.main_topic,
+            discovery_topic=self.discovery_topic,
+            **kwargs
+        )
 
     def mqtt_discovery_unique_id(self):
         """Get unique_id for current hardware.
@@ -198,52 +171,55 @@ class MqttAdapterSkill(MycroftSkill):
 
     def mqtt_availability_config(self):
         return {
-            "availability_topic": self.topics.available,
-            "pl_avail": "ONLINE",
-            "pl_not_avail": "OFFLINE",
+            "availability_topic": self.expand(AVAILABILITY_TOPIC),
+            "pl_avail": ONLINE,
+            "pl_not_avail": OFFLINE,
         }
 
     def set_sensor_state(self, topic, payload):
-        self.mqtt.publish(topic, payload=payload, retain=True)
+        self.mqtt.publish(self.expand(topic), payload=payload, retain=True)
+
 
     # Mic mute switch
     def init_mic_mute(self):
         self.bus.on('mycroft.mic.get_status.response', self.handle_mic_status)
         self.bus.emit(Message('mycroft.mic.get_status'))
-        self.register_mqtt_handler(self.topics.mic_mute.set, self.process_mic_mute_command)
+        self.register_mqtt_handler(MIC_MUTE_SET_TOPIC, self.process_mic_mute_command)
         self.register_advertise_function(self.advertise_mic_mute)
 
     def handle_mic_status(self, event):
-        payload = 'ON' if event.data['muted'] else 'OFF'
-        self.set_sensor_state(self.topics.mic_mute.state, payload)
+        payload = ON if event.data['muted'] else OFF
+        self.set_sensor_state(self.expand(MIC_MUTE_STATE_TOPIC), payload)
 
     def process_mic_mute_command(self, state):
-        if state == 'ON':
+        if state == ON:
             self.log.info('Switch MIC MUTE toggled on via MQTT')
             self.bus.emit(Message('mycroft.mic.mute'))
-        elif state == 'OFF':
+        elif state == OFF:
             self.log.info('Switch MIC MUTE toggled off via MQTT')
             self.bus.emit(Message('mycroft.mic.unmute'))
         else:
-            raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+            self.log.warning("Payload {} is unknown".format(state))
         self.bus.emit(Message('mycroft.mic.get_status'))
 
-    def advertise_mic_mute(self, discovery_prefix):
+    def advertise_mic_mute(self):
         id = self.mqtt_discovery_unique_id() + "mic_mute"
         config = {
-            "command_topic": self.topics.mic_mute.set,
-            "state_topic": self.topics.mic_mute.state,
+            "command_topic": self.expand(MIC_MUTE_SET_TOPIC), 
+            "state_topic": self.expand(MIC_MUTE_STATE_TOPIC),
             "name": "Mycroft Mic Muted",
-            "uniq_id": id, 
-            "pl_on": "ON",
-            "pl_off": "OFF",
+            "uniq_id": id,
+            "pl_on": ON, 
+            "pl_off": OFF,
             "icon": "mdi:microphone-off",
-            "device": self.mqtt_device_config()
+            "device": self.mqtt_device_config(),
+            **self.mqtt_availability_config()
         }
-        config.update(self.mqtt_availability_config())
-        discovery_topic = "{}/switch/{}/config".format(discovery_prefix, id)
-        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Mic mute advertised')
+        self.mqtt.publish(
+            self.expand(SWITCH_DISCOVERY_TOPIC, id=id),
+            payload=json.dumps(config),
+            retain=True
+        )
 
 
     # Volume mute switch
@@ -251,139 +227,157 @@ class MqttAdapterSkill(MycroftSkill):
         # For now I don't want to interact with mixer inside this plugin
         # but to rely on ohter Mycroft skills instead. So I'll assume
         # on the moment of the plugin's init volume is unmuted
-        self.bus.on('mycroft.volume.duck', lambda _: self.set_vol_mute_state('ON'))
-        self.bus.on('mycroft.volume.unduck', lambda _: self.set_vol_mute_state('OFF'))
-        self.register_mqtt_handler(self.topics.vol_mute.set, self.process_vol_mute_command)
+        self.bus.on('mycroft.volume.duck', self.set_vol_mute_on)
+        self.bus.on('mycroft.volume.unduck', self.set_vol_mute_off)
+        self.register_mqtt_handler(VOL_MUTE_SET_TOPIC, self.process_vol_mute_command)
         self.register_advertise_function(self.advertise_vol_mute)
         # Set initial state
-        self.set_vol_mute_state('OFF')
+        self.set_vol_mute_off()
 
+    def set_vol_mute_on(self):
+        self.set_sensor_state(self.expand(VOL_MUTE_SET_TOPIC), ON)
 
-    def set_vol_mute_state(self, state):
-        self.set_sensor_state(self.topics.vol_mute.state, state)
-
+    def set_vol_mute_off(self):
+        self.set_sensor_state(self.expand(VOL_MUTE_SET_TOPIC), OFF)
 
     def process_vol_mute_command(self, state):
-        if state == 'ON':
+        if state == ON:
             self.log.info('Switch VOL MUTE toggled on via MQTT')
             self.bus.emit(Message('mycroft.volume.mute', data={'speak_message': False}))
-        elif state == 'OFF':
+        elif state == OFF:
             self.log.info('Switch VOL MUTE toggled off via MQTT')
             self.bus.emit(Message('mycroft.volume.unmute', data={'speak_message': False}))
         else:
-            raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+            self.log.warning("Payload {} is unknown".format(state))
 
-    def advertise_vol_mute(self, discovery_prefix):
+    def advertise_vol_mute(self):
         id = self.mqtt_discovery_unique_id() + "vol_mute"
         config = {
-            "command_topic": self.topics.vol_mute.set,
-            "state_topic": self.topics.vol_mute.state,
+            "command_topic": self.expand(VOL_MUTE_SET_TOPIC),
+            "state_topic": self.expand(VOL_MUTE_STATE_TOPIC),
             "name": "Mycroft Speaker Muted",
             "uniq_id": id,
-            "pl_on": "ON",
-            "pl_off": "OFF",
+            "pl_on": ON,
+            "pl_off": OFF,
             "icon": "mdi:volume-off",
-            "device": self.mqtt_device_config()
+            "device": self.mqtt_device_config(),
+            **self.mqtt_availability_config()
         }
-        config.update(self.mqtt_availability_config())
-        discovery_topic = "{}/switch/{}/config".format(discovery_prefix, id)
-        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Volume mute advertised')
+        self.mqtt.publish(
+            self.expand(SWITCH_DISCOVERY_TOPIC, id=id),
+            payload=json.dumps(config),
+            retain=True
+        )
+
 
     # Speaking binary sensors
     def init_speaking_sensor(self):
         self.bus.on(
             'recognizer_loop:audio_output_start',
-            lambda _: self.set_speaking('ON')
+            self.set_speaking_on
         )
         self.bus.on(
             'recognizer_loop:audio_output_end',
-            lambda _: self.set_speaking('OFF')
+            self.set_speaking_off
         )
         self.register_advertise_function(self.advertise_speaking)
-        self.set_speaking('OFF')
+        self.set_speaking_off()
 
-    def set_speaking(self, state):
-        self.set_sensor_state(self.topics.speaking.state, state)
+    def set_speaking_on(self):
+        self.set_sensor_state(self.expand(SPEAKING_STATE_TOPIC), ON)
 
-    def advertise_speaking(self, discovery_prefix):
+    def set_speaking_off(self):
+        self.set_sensor_state(self.expand(SPEAKING_STATE_TOPIC), OFF)
+
+    def advertise_speaking(self):
         id = self.mqtt_discovery_unique_id() + "speaking"
         config = {
-            "state_topic": self.topics.speaking.state,
+            "state_topic": self.expand(SPEAKING_STATE_TOPIC),
             "name": "Mycroft Is Speaking",
             "uniq_id": id,
-            "pl_on": "ON",
-            "pl_off": "OFF",
+            "pl_on": ON,
+            "pl_off": OFF,
             "icon": "mdi:account-voice",
-            "device": self.mqtt_device_config()
+            "device": self.mqtt_device_config(),
+            **self.mqtt_availability_config()
         }
-        config.update(self.mqtt_availability_config())
-        discovery_topic = "{}/binary_sensor/{}/config".format(discovery_prefix, id)
-        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Speaking sensor advertised')
+        self.mqtt.publish(
+            self.expand(BINARY_SENSOR_DISCOVERY_TOPIC, id=id),
+            payload=json.dumps(config),
+            retain=True)
+
 
     # Listening binary sensor
     def init_listening_sensor(self):
         self.bus.on(
             'recognizer_loop:record_begin',
-            lambda _: self.set_listening('ON')
+            self.set_listening_on
         )
         self.bus.on(
             'recognizer_loop:record_end',
-            lambda _: self.set_listening('OFF')
+            self.set_listening_off
         )        
         self.register_advertise_function(self.advertise_listening)
         self.set_listening('OFF')
 
-    def set_listening(self, state):
-        self.set_sensor_state(self.topics.listening.state, state)
+    def set_listening_on(self):
+        self.set_sensor_state(LISTENING_STATE_TOPIC, ON)
+
+    def set_listening_off(self):
+        self.set_sensor_state(LISTENING_STATE_TOPIC, OFF)
 
     def advertise_listening(self, discovery_prefix):
         id = self.mqtt_discovery_unique_id() + "listening"
         config = {
-            "state_topic": self.topics.listening.state,
+            "state_topic": self.expand(LISTENING_STATE_TOPIC),
             "name": "Mycroft Is Listening",
             "uniq_id": id,
-            "pl_on": "ON",
-            "pl_off": "OFF",
+            "pl_on": ON,
+            "pl_off": OFF,
             "icon": "mdi:ear-hearing",
-            "device": self.mqtt_device_config()
+            "device": self.mqtt_device_config(),
+            **self.mqtt_availability_config()
         }
-        config.update(self.mqtt_availability_config())
-        discovery_topic = "{}/binary_sensor/{}/config".format(discovery_prefix, id)
-        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Listening sensor advertised')
+        self.mqtt.publish(
+            self.expand(BINARY_SENSOR_DISCOVERY_TOPIC, id=id),
+            payload=json.dumps(config),
+            retain=True
+        )
+
 
     # Listen button
     def init_listen_button(self):
-        self.register_mqtt_handler(self.topics.listen_button, self.process_listen_button)
+        self.register_mqtt_handler(LISTEN_BUTTON_TOPIC, self.process_listen_button)
         self.register_advertise_function(self.advertise_listen_button)
 
     def process_listen_button(self, state):
-        if state == 'PRESS':
+        if state == PRESS:
             self.log.info('Command listening triggered by MQTT')
             self.bus.emit(Message('mycroft.mic.listen'))
         else:
-            raise MqttAdapterSkillError("Payload {} is unknown".format(state))
+            self.log.warning("Payload {} is unknown".format(state))
 
-    def advertise_listen_button(self, discovery_prefix):
+    def advertise_listen_button(self):
         id = self.mqtt_discovery_unique_id() + "listen_button"
         config = {
-            "command_topic": self.topics.listen_button,
+            "command_topic": self.expand(LISTEN_BUTTON_TOPIC),
             "name": "Mycroft Listen Command",
             "uniq_id": id,
-            "payload_press": "PRESS",
+            "payload_press": PRESS,
             "icon": "mdi:record-rec",
-            "device": self.mqtt_device_config()
+            "device": self.mqtt_device_config(),
+            **self.mqtt_availability_config()
         }
-        config.update(self.mqtt_availability_config())
-        discovery_topic = "{}/button/{}/config".format(discovery_prefix, id)
-        self.mqtt.publish(discovery_topic, payload=json.dumps(config), retain=True)
-        self.log.info('Listen button advertised')
+        self.mqtt.publish(
+            self.expand(BUTTON_DISCOVERY_TOPIC, id=id),
+            payload=json.dumps(config),
+            retain=True
+        )
+
 
     # Command topic
     def init_command(self):
-        self.register_mqtt_handler(self.topics.command, self.process_command)
+        self.register_mqtt_handler(COMMAND_TOPIC, self.process_command)
 
     def process_command(self, command):
         self.bus.emit(Message("recognizer_loop:utterance", {
