@@ -1,6 +1,10 @@
 # Mycroft MQTT Adapter
 A skill to control your Mycroft instance via MQTT protocol
 
+## Installation
+
+Go to [[https://account.mycroft.ai/skills]], find Installer skill, paste url https://github.com/jumper047/mycroft-mqtt-adapter into "Skill URL" field and press "Save". As alternate way you can connect to your Mycroft instance via ssh and enter `mycroft-skill install https://github.com/jumper047/mycroft-mqtt-adapter`
+
 ## About 
 
 To use this skill you need MQTT server and (possibly) some sort of home automation server. All features were tested with HomeAssistant but should also work with other servers (except, maybe, MQTT discovery - it was designed primary for HomeAssistant). Via this skill you can:
