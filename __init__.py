@@ -113,7 +113,7 @@ class MqttAdapterSkill(MycroftSkill):
             for func in self.advertise_functions:
                 func()
 
-        self.mqtt.publish(self.expand(AVAILABILITY_TOPIC), payload="ONLINE", retain=True)
+        self.mqtt.publish(self.expand(AVAILABILITY_TOPIC), payload=ONLINE, retain=True)
 
         for topic in self.command_handlers:
             client.subscribe(topic)
