@@ -65,7 +65,7 @@ class MqttAdapterSkill(MycroftSkill):
 
         # Init sensors
         self.init_mic_mute()
-        self.init_vol_mute()
+        # self.init_vol_mute()
         self.init_listening_sensor()
         self.init_speaking_sensor()
         self.init_listen_button()
