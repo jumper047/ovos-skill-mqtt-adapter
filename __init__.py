@@ -234,10 +234,10 @@ class MqttAdapterSkill(MycroftSkill):
         # Set initial state
         self.set_vol_mute_off()
 
-    def set_vol_mute_on(self):
+    def set_vol_mute_on(self, event=None):
         self.set_sensor_state(self.expand(VOL_MUTE_SET_TOPIC), ON)
 
-    def set_vol_mute_off(self):
+    def set_vol_mute_off(self, event=None):
         self.set_sensor_state(self.expand(VOL_MUTE_SET_TOPIC), OFF)
 
     def process_vol_mute_command(self, state):
@@ -283,10 +283,10 @@ class MqttAdapterSkill(MycroftSkill):
         self.register_advertise_function(self.advertise_speaking)
         self.set_speaking_off()
 
-    def set_speaking_on(self):
+    def set_speaking_on(self, event=None):
         self.set_sensor_state(self.expand(SPEAKING_STATE_TOPIC), ON)
 
-    def set_speaking_off(self):
+    def set_speaking_off(self, event=None):
         self.set_sensor_state(self.expand(SPEAKING_STATE_TOPIC), OFF)
 
     def advertise_speaking(self):
@@ -320,10 +320,10 @@ class MqttAdapterSkill(MycroftSkill):
         self.register_advertise_function(self.advertise_listening)
         self.set_listening_off()
 
-    def set_listening_on(self):
+    def set_listening_on(self, event=None):
         self.set_sensor_state(LISTENING_STATE_TOPIC, ON)
 
-    def set_listening_off(self):
+    def set_listening_off(self, event=None):
         self.set_sensor_state(LISTENING_STATE_TOPIC, OFF)
 
     def advertise_listening(self):
