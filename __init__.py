@@ -65,7 +65,7 @@ class MqttAdapterSkill(MycroftSkill):
 
         # Init sensors
         self.init_mic_mute()
-        # self.init_vol_mute()
+        self.init_vol_mute()
         self.init_listening_sensor()
         self.init_speaking_sensor()
         self.init_listen_button()
@@ -235,10 +235,10 @@ class MqttAdapterSkill(MycroftSkill):
         self.set_vol_mute_off()
 
     def set_vol_mute_on(self, event=None):
-        self.set_sensor_state(self.expand(VOL_MUTE_SET_TOPIC), ON)
+        self.set_sensor_state(self.expand(VOL_MUTE_STATE_TOPIC), ON)
 
     def set_vol_mute_off(self, event=None):
-        self.set_sensor_state(self.expand(VOL_MUTE_SET_TOPIC), OFF)
+        self.set_sensor_state(self.expand(VOL_MUTE_STATE_TOPIC), OFF)
 
     def process_vol_mute_command(self, state):
         if state == ON:
