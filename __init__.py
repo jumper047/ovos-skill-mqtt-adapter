@@ -91,7 +91,7 @@ class MqttAdapterSkill(MycroftSkill):
 
         self.mqtt.on_connect = self.on_connect
         self.mqtt.on_message = self.on_message
-        self.mqtt.enable_logger()
+        self.mqtt.enable_logger(logger=self.log)
 
         # Set up availability topic
         self.mqtt.will_set(self.expand(AVAILABILITY_TOPIC), payload=OFFLINE, retain=True)
