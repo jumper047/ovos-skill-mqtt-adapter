@@ -44,6 +44,7 @@ OFFLINE = "OFFLINE"
 PRESS = "PRESS"
 
 # Discovery
+DEFAULT_DISCOVERY_TOPIC = "homeassistant"
 SWITCH_DISCOVERY_TOPIC = "{discovery_topic}/switch/{id}/config"
 BINARY_SENSOR_DISCOVERY_TOPIC = "{discovery_topic}/binary_sensor/{id}/config"
 BUTTON_DISCOVERY_TOPIC = "{discovery_topic}/button/{id}/config"
@@ -61,7 +62,7 @@ class MqttAdapterSkill(MycroftSkill):
         
         subtopic = self.settings.get("subtopic")
         self.main_topic = "mycroft/{}".format(subtopic) if subtopic else "mycroft"
-        self.discovery_topic = self.settings.get('discovery_prefix')
+        self.discovery_topic = self.settings.get('discovery_prefix', DEFAULT_DISCOVERY_TOPIC)
 
         # Init sensors
         self.init_mic_mute()
