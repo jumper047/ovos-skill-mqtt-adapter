@@ -34,6 +34,7 @@ SPEAKING_STATE_TOPIC = '{main_topic}/speaking/state'
 LISTENING_STATE_TOPIC = '{main_topic}/listening/state'
 AVAILABILITY_TOPIC = '{main_topic}/available'
 LISTEN_BUTTON_TOPIC = '{main_topic}/listen_button'
+STOP_BUTTON_TOPIC = '{main_topic}/stop_button'
 COMMAND_TOPIC = '{main_topic}/command'
 
 # Payloads
@@ -70,6 +71,7 @@ class MqttAdapterSkill(MycroftSkill):
         self.init_listening_sensor()
         self.init_speaking_sensor()
         self.init_listen_button()
+        self.init_stop_button()
         self.init_command()
 
         self.setup_mqtt()
@@ -387,6 +389,34 @@ class MqttAdapterSkill(MycroftSkill):
             retain=True
         )
 
+    # Stop button
+    def init_stop_button(self):
+        self.register_mqtt_handler(STOP_BUTTON_TOPIC, self.process_stop_button)
+        self.register_advertise_function(self.advertise_stop_button)
+
+    def process_stop_button(self, state):
+        if state == PRESS:
+            self.log.info('Command stop triggered by MQTT')
+            self.bus.emit(Message('mycroft.stop'))
+        else:
+            self.log.warning("Payload {} is unknown".format(state))
+
+    def advertise_stop_button(self):
+        id = self.mqtt_discovery_unique_id() + "listen_button"
+        config = {
+            "command_topic": self.expand(STOP_BUTTON_TOPIC),
+            "name": "Mycroft Stop Command",
+            "uniq_id": id,
+            "payload_press": PRESS,
+            "icon": "mdi:stop-circle",
+            "device": self.mqtt_device_config(),
+            **self.mqtt_availability_config()
+        }
+        self.mqtt.publish(
+            self.expand(BUTTON_DISCOVERY_TOPIC, id=id),
+            payload=json.dumps(config),
+            retain=True
+        )
 
     # Command topic
     def init_command(self):
