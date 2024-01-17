@@ -229,12 +229,23 @@ class MqttAdapterSkill(MycroftSkill):
         # For now I don't want to interact with mixer inside this plugin
         # but to rely on ohter Mycroft skills instead. So I'll assume
         # on the moment of the plugin's init volume is unmuted
-        self.bus.on('mycroft.volume.duck', self.set_vol_mute_on)
-        self.bus.on('mycroft.volume.unduck', self.set_vol_mute_off)
+        self.bus.on('mycroft.volume.mute', self.set_vol_mute_on)
+        self.bus.on('mycroft.volume.unmute', self.set_vol_mute_off)
         self.register_mqtt_handler(VOL_MUTE_SET_TOPIC, self.process_vol_mute_command)
         self.register_advertise_function(self.advertise_vol_mute)
         # Set initial state
-        self.set_vol_mute_off()
+        if self._get_vol_muted():
+            self.set_vol_mute_off()
+        else:
+            self.set_vol_mute_on()
+
+    def _get_vol_muted(self):
+        volume_poll: Message = self.bus.wait_for_response(Message("mycroft.volume.get"), timeout=0.3)
+        if volume_poll:
+            return volume_poll.data.get("muted", False)
+        else:
+            # fallback value
+            return False
 
     def set_vol_mute_on(self, event=None):
         self.set_sensor_state(self.expand(VOL_MUTE_STATE_TOPIC), ON)
