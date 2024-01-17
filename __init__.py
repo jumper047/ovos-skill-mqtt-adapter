@@ -402,7 +402,7 @@ class MqttAdapterSkill(MycroftSkill):
             self.log.warning("Payload {} is unknown".format(state))
 
     def advertise_stop_button(self):
-        id = self.mqtt_discovery_unique_id() + "listen_button"
+        id = self.mqtt_discovery_unique_id() + "stop_button"
         config = {
             "command_topic": self.expand(STOP_BUTTON_TOPIC),
             "name": "Mycroft Stop Command",
