@@ -17,9 +17,9 @@ import json
 import uuid
 
 import paho.mqtt.client as mqtt
-from mycroft.messagebus.message import Message
-from mycroft.skills.core import MycroftSkill
-from mycroft.version import CORE_VERSION_STR
+from ovos_workshop.skills import OVOSSkill
+from ovos_bus_client.message import Message
+from ovos_core.version import OVOS_VERSION_STR
 
 
 APP_NAME = "mycroft_mqtt_adapter"
@@ -51,7 +51,7 @@ BINARY_SENSOR_DISCOVERY_TOPIC = "{discovery_topic}/binary_sensor/{id}/config"
 BUTTON_DISCOVERY_TOPIC = "{discovery_topic}/button/{id}/config"
 
 
-class MqttAdapterSkill(MycroftSkill):
+class MqttAdapterSkill(OVOSSkill):
 
     def __init__(self):
         super().__init__("MqttAdapterSkill")
@@ -167,7 +167,7 @@ class MqttAdapterSkill(MycroftSkill):
             "name": "Mycroft",
             "model": self.config_core['enclosure'].get("platform", "unknown"), 
             "manufacturer": "Mycroft AI, Inc",
-            "sw_version": CORE_VERSION_STR,
+            "sw_version": OVOS_VERSION_STR,
             "identifiers": [
                     self.mqtt_discovery_unique_id(),
                 ]
@@ -429,6 +429,7 @@ class MqttAdapterSkill(MycroftSkill):
         }))
 
 
+# TODO: Remove create_skill() function
 def create_skill():
     return MqttAdapterSkill()
 
